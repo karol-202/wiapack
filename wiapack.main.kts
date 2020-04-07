@@ -1,0 +1,1 @@
+#!./kotln-runner
