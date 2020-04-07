@@ -12,13 +12,20 @@ exit #*/
 import com.github.ajalt.clikt.completion.CompletionCandidates
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Comment
 import org.jsoup.nodes.Element
 import java.io.File
 
 Wiapack().main(args)
+
+object Const
+{
+	const val SIGNATURE = "File packed by Wiapack (https://github.com/karol-202/wiapack)"
+}
 
 inner class Wiapack : CliktCommand()
 {
@@ -28,26 +35,31 @@ inner class Wiapack : CliktCommand()
 	                                                                                              mustBeReadable = true)
 	private val outputFile: File? by option("-o", "--output",
 	                                        help = "Path to file to write the output to").file(canBeDir = false)
+	private val signature: Boolean by option("-s", "--signature",
+	                                         help = "If set, information about being packed by Wiapack will be generated " +
+			                                         "at the beginning of the file").flag("-S", "--no-signature",
+	                                                                                      default = true)
 
 	override fun run()
 	{
 		val packer = Packer(rootFile)
-		val newDocument = packer.pack()
+		packer.pack()
+		if(signature) packer.appendComment(Const.SIGNATURE)
+		val output = packer.generateOutput()
 
-		outputFile?.writeText(newDocument) ?: println(newDocument)
+		outputFile?.writeText(output) ?: println(output)
 	}
 }
 
-inner class Packer(private val rootFile: File)
+inner class Packer(rootFile: File)
 {
 	private val directory: File = rootFile.canonicalFile.parentFile
+	private val document = parseDocument(rootFile)
 
-	fun pack(): String
+	fun pack()
 	{
-		val document = parseDocument(rootFile)
 		packLinks(document)
 		packScripts(document)
-		return document.toString().unescapeChars()
 	}
 
 	private fun parseDocument(file: File) = Jsoup.parse(file, "UTF-8")
@@ -88,4 +100,12 @@ inner class Packer(private val rootFile: File)
 	private fun String.escapeChars() = replace("\n", "\\n").replace("\t", "\\t").replace(" ", """\x20""")
 
 	private fun String.unescapeChars() = replace("\\n", "\n").replace("\\t", "\t").replace("""\x20""", " ")
+
+	fun appendComment(comment: String)
+	{
+		document.prependText("\\n")
+		document.prependChild(Comment(comment))
+	}
+
+	fun generateOutput() = document.toString().unescapeChars()
 }
