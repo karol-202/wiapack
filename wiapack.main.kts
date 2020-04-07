@@ -1,6 +1,6 @@
 #!/bin/bash
 /*bin/false
-/usr/bin/env kotlin "$0" -- "$@"
+/usr/bin/env kotlin "$(realpath $0)" -- "$@"
 exit #*/
 // This is very hacky way workaround for
 // not being able to pass arguments to Kotlin script because of kotlinc intercepting them
@@ -40,7 +40,7 @@ inner class Wiapack : CliktCommand()
 
 inner class Packer(private val rootFile: File)
 {
-	private val directory: File = rootFile.parentFile
+	private val directory: File = rootFile.canonicalFile.parentFile
 
 	fun pack(): String
 	{
