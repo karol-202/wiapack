@@ -1,5 +1,0 @@
-#!/bin/bash
-script="$1"
-shift 1
-kotlin "$script" -- "$@"
-
