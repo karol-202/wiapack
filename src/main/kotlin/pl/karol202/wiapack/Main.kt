@@ -1,6 +1,3 @@
 package pl.karol202.wiapack
 
-fun main()
-{
-
-}
+fun main(args: Array<String>) = WiapackCommand().main(args)
