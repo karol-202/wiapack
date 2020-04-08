@@ -25,6 +25,7 @@ Wiapack().main(args)
 object Const
 {
 	const val SIGNATURE = "File packed by Wiapack (https://github.com/karol-202/wiapack)"
+	const val PLACEHOLDER = "WIAPACK"
 }
 
 inner class Wiapack : CliktCommand()
@@ -84,28 +85,41 @@ inner class Packer(rootFile: File)
 	private fun transformLinkStylesheet(element: Element): Element?
 	{
 		val href = element.attr("href").takeIf { it.isNotBlank() } ?: return null
-		val content = readFile(href)
-		return Element("style").appendText("\\n$content")
+		val placeholder = Element(Const.PLACEHOLDER).appendText(href)
+		return Element("style").appendChild(placeholder)
 	}
 
 	private fun transformScript(element: Element): Element?
 	{
 		val src = element.attr("src").takeIf { it.isNotBlank() } ?: return null
-		val content = readFile(src)
-		return Element("script").appendText("\\n$content")
+		val placeholder = Element(Const.PLACEHOLDER).appendText(src)
+		return Element("script").appendChild(placeholder)
 	}
-
-	private fun readFile(file: String) = File(directory, file).readText().escapeChars()
-
-	private fun String.escapeChars() = replace("\n", "\\n").replace("\t", "\\t").replace(" ", """\x20""")
-
-	private fun String.unescapeChars() = replace("\\n", "\n").replace("\\t", "\t").replace("""\x20""", " ")
 
 	fun appendComment(comment: String)
 	{
-		document.prependText("\\n")
+		document.prependText("\n")
 		document.prependChild(Comment(comment))
 	}
 
-	fun generateOutput() = document.toString().unescapeChars()
+	fun generateOutput() = document.toString().resolvePlaceholders()
+
+	private fun String.resolvePlaceholders(): String
+	{
+		val startTag = "<${Const.PLACEHOLDER}>"
+		val endTag = "</${Const.PLACEHOLDER}>"
+
+		var current = this
+		while(true)
+		{
+			val startIndex = current.indexOf(startTag).takeIf { it != -1 } ?: break
+			val endIndex = current.indexOf(endTag).takeIf { it != -1 } ?: break
+			val filePath = current.substring(startIndex + startTag.length, endIndex).trim()
+			val content = readFile(filePath)
+			current = current.substring(0, startIndex) + content + current.substring(endIndex + endTag.length)
+		}
+		return current
+	}
+
+	private fun readFile(file: String) = File(directory, file).readText()
 }
